@@ -1,0 +1,18 @@
+{
+    "Lua.workspace.library": [
+        "c:\\Users\\cschulte.KSA\\AppData\\Roaming\\Code\\User\\globalStorage\\delwing.mudlet-scripts-sdk/docs"
+    ],
+    "[lua]": {
+        "editor.tabSize": 2,
+        "editor.detectIndentation": false
+    },
+    "Lua.diagnostics.disable": [
+        "need-check-nil",
+        "undefined-field",
+        "cast-local-type",
+        "trailing-space",
+        "lowercase-global",
+        "deprecated",
+        "duplicate-set-field"
+    ]
+}

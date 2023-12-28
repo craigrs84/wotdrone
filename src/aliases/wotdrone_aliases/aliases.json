@@ -1,0 +1,10 @@
+[
+  {
+    "name": "botStart",
+    "regex": "^bot start$"
+  },
+  {
+    "name": "botStop",
+    "regex": "^bot stop$"
+  }
+]
