@@ -183,6 +183,23 @@ function BaseController:worker()
   error("not implemented")
 end
 
+function BaseController:waitForPacketAsync(patterns, limit)
+  limit = limit or self._shortLimit
+   
+  for i = 1, limit do
+    local packet = self:readPacketAsync()
+
+    for _, pattern in pairs(patterns) do
+      local matches = {rex.match(packet, pattern.text, 1, "m")}
+      if not table.is_empty(matches) then
+        return pattern.code, packet, matches
+      end
+    end
+  end
+
+  return nil
+end
+
 function BaseController:readLineAsync()
   while true do
     local results = {coroutine.yield()}
@@ -239,28 +256,14 @@ function BaseController:waitAsync(time)
 end
 
 function BaseController:basicAction(command, args, patterns, limit)
-  local results = {}
-
-  limit = limit or self._shortLimit
   if not table.is_empty(args) then
     command = command .. " " .. table.concat(args, " ")
   end
 
   send(command)
-  for i = 1, limit do
-    local packet = self:readPacketAsync()
-
-    for key, value in pairs(patterns) do
-      local matches = {rex.match(packet, value, 1, "m")}
-      if not table.is_empty(matches) then
-        results[key] = matches
-      end
-    end
-
-    if not table.is_empty(results) then
-      self:runDeferredActions()
-      return results, packet
-    end
+  local code, packet, matches = self:waitForPacketAsync(patterns, limit)
+  if (code) then
+    return code, packet, matches
   end
   
   error("error during: " .. command)
@@ -269,86 +272,86 @@ end
 --basic action: look
 function BaseController:look(...)
   return self:basicAction("look", {...}, {
-    success = "^\\[ obvious exits: .* \\]$",
-    dark = "^It is pitch black\\.\\.\\.$"
+    { code = "success", text = "^\\[ obvious exits: .* \\]$" },
+    { code = "dark", text = "^It is pitch black\\.\\.\\.$" }
   })
 end
 
 --basic action: move
 function BaseController:move(direction, ...)
   return self:basicAction(direction, {...}, {
-    success = "^\\[ obvious exits: .* \\]$",
-    dark = "^It is pitch black\\.\\.\\.$",
-    invalid = "^Alas, you cannot go that way\\.\\.\\.$",
-    closedGate = "^The \\w*[Gg]ate\\w* seems to be closed\\.$",
-    closedDoor = "^.+ seems to be closed\\.$",
-    exhausted = "^You are too exhausted\\.$",
-    mountExhausted = "^Your mount is too exhausted\\.$",
-    engaged = "^No way!  You're fighting for your life!$"
+    { code = "success", text = "^\\[ obvious exits: .* \\]$" },
+    { code = "dark", text = "^It is pitch black\\.\\.\\.$" },
+    { code = "invalid", text = "^Alas, you cannot go that way\\.\\.\\.$" },
+    { code = "closedGate", text = "^The \\w*[Gg]ate\\w* seems to be closed\\.$" },
+    { code = "closedDoor", text = "^.+ seems to be closed\\.$" },
+    { code = "exhausted", text = "^You are too exhausted\\.$" },
+    { code = "mountExhausted", text = "^Your mount is too exhausted\\.$" },
+    { code = "engaged", text = "^No way!  You're fighting for your life!$" }
   })
 end
 
 --basic action: flee
 function BaseController:flee(...)
   return self:basicAction("flee", {...}, {
-    success = "^\\[ obvious exits: .* \\]$",
-    dark = "^It is pitch black\\.\\.\\.$",
-    fail = "^PANIC!  You couldn't escape!$",
-    mounted = "^You can't ride in there\\.$",
-    exhausted = "^You are too exhausted\\.$",
-    mountExhausted = "^Your mount is too exhausted\\.$"
+    { code = "success", text = "^\\[ obvious exits: .* \\]$" },
+    { code = "dark", text = "^It is pitch black\\.\\.\\.$" },
+    { code = "fail", text = "^PANIC!  You couldn't escape!$" },
+    { code = "mounted", text = "^You can't ride in there\\.$" },
+    { code = "exhausted", text = "^You are too exhausted\\.$" },
+    { code = "mountExhausted", text = "^Your mount is too exhausted\\.$" }
   })
 end
 
 function BaseController:kill(target, name)
   return self:basicAction("kill", {target}, {
-    success = "^" .. name .. " is dead!  R\\.I\\.P\\.$",
-    notHere = "^They aren't here\\.$"
+    { code = "success", text = "^" .. name .. " is dead!  R\\.I\\.P\\.$" },
+    { code = "notHere", text = "^They aren't here\\.$" }
   }, self._extendedLimit)
 end
 
 function BaseController:call(...)
   return self:basicAction("call", {...}, {
-    success = "^You call for .+ to be opened\\.\\n.+ is opened from the other side\\.$"
+    { code = "success", text = "^You call for .+ to be opened\\.\\n.+ is opened from the other side\\.$" },
+    { code = "success2", text = "^You call for .+ to be opened\\.$\\n[\\s\\S]*^.+ opens .+\\.$" },
+    { code = "success3", text = "^You call for .+ to be opened\\.$" }
   })
 end
 
 function BaseController:openDoor(...)
   return self:basicAction("open door", {...}, {
-    success = "^Ok.$|^It's already open!$",
-    noDoor = "^I see no .+ here\\.$",
-    locked = "^It seems to be locked\\.$"
+    { code = "success", text = "^Ok.$|^It's already open!$" },
+    { code = "noDoor", text = "^I see no .+ here\\.$" },
+    { code = "locked", text = "^It seems to be locked\\.$" }
   })
 end
 
 --basic action: dismount
 function BaseController:dismount(...)
   return self:basicAction("dismount", {...}, {
-    success = "^You stop riding .+\\.$",
-    notRiding = "^But you're not riding anything!$"
+    { code = "success", text = "^You stop riding .+\\.$" },
+    { code = "notRiding", text = "^But you're not riding anything!$" }
   })
 end
 
 --basic action: stat
 function BaseController:stat(...)
   return self:basicAction("stat", {...}, {
-    success = "^You are a .+ (?:male|female) .+\\.",
+    { code = "success", text = "^You are a .+ (?:male|female) .+\\." },
   })
 end
 
 --basic action: stat
 function BaseController:equipment(...)
   return self:basicAction("equipment", {...}, {
-    success = "^You are using:$",
+    { code = "success", text = "^You are using:$" },
   })
 end
-
 
 --composite action: look with retry
 function BaseController:lookWithRetry()
   for i = 1, self._shortLimit do
-    local keys = table.keys(self:look())
-    if table.index_of(keys, success) then
+    if self:look() == "success" then
       return success
     end
     self:waitAsync(60)
@@ -359,8 +362,7 @@ end
 --composite action: flee with retry
 function BaseController:fleeWithRetry()
   for i = 1, self._shortLimit do
-    local keys = table.keys(self:flee())
-    if table.index_of(keys, success) then
+    if self:look() == "success" then
       return success
     end
   end
@@ -394,16 +396,16 @@ function BaseController:moveTo(roomId, delay, limit)
       self:openDoor(direction)
     end
     
-    local keys = table.keys(self:move(direction))
+    local code = self:move(direction)
     if getPlayerRoom() == roomId then
       return success
-    elseif table.index_of(keys, "engaged") then
+    elseif code == "engaged" then
       self:fleeWithRetry()
-    elseif table.index_of(keys, "closedGate") then
+    elseif code == "closedGate" then
       self:call()
-    elseif table.index_of(keys, "closedDoor") then
+    elseif code == "closedDoor" then
       self:openDoor(direction)
-    elseif table.index_of(keys, "exhausted") or table.index_of(keys, "mountExhausted") then
+    elseif code == "exhausted" or code == "mountExhausted" then
       self:waitAsync(10)
     elseif delay then
       self:waitAsync(delay)
@@ -416,3 +418,17 @@ function BaseController:moveTo(roomId, delay, limit)
 
   error("error during: moveTo")
 end
+
+
+
+-- create event callback queue
+-- so for example timer fires (add that event to queue with timer id as state/arg)
+-- for example packet received, add that even to queue
+-- question how do we clear queue if nothing is listening to event, for example line received?
+
+
+
+--example problem
+-- main thread waits for delay
+  --interrupt triggers a secondary wait
+  -- main threads timer fires but is missed because were waiting on secondary thread/wait

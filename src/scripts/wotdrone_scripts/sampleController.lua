@@ -4,9 +4,15 @@ local SampleController = wotdrone.SampleController
 local success = "success"
 
 function SampleController:interceptPacket(packet)
-  if rex.match(packet, "^It is pitch black\\.\\.\\.$", 1, "m") or
+  if rex.match(packet, "^The sun sinks into the hills\\.$", 1, "m") or
+    rex.match(packet, "^The night has begun\\.$", 1, "m") or
+    rex.match(packet, "^It is pitch black\\.\\.\\.$", 1, "m") or
     rex.match(packet, "^.+ has gone out!$", 1, "m") then
     send("hold lantern")
+  end
+
+  if rex.match(packet, "^The day has begun\\.$", 1, "m") then
+    send("remove lantern")
   end
 
   if rex.match(packet, "gold|copper", 1, "m") then
@@ -30,8 +36,8 @@ function SampleController:worker()
     self:findSapling()
 
     while true do
-      local keys = table.keys(self:killSapling())
-      if table.index_of(keys, "level") then
+      local code = self:killSapling()
+      if code == "level" then
         self:stat()
         local stats = {rex.match(self._lastPacket, "^Your base abilities are: Str:(\\d+) Int:(\\d+) Wil:(\\d+) Dex:(\\d+) Con:(\\d+)\\.$", 1, "m")}
         if not table.is_empty(stats) then
@@ -39,7 +45,7 @@ function SampleController:worker()
           str, int, wil, dex, con = tonumber(str), tonumber(int), tonumber(wil), tonumber(dex), tonumber(con)
           send("disengage")
 
-          if str >= 19 and int >= 16 and wil >= 12 and dex >= 18 and con >= 19 then
+          if str >= 19 and int >= 17 and wil >= 17 and dex >= 18 and con >= 19 then
             cecho("<green>Congratulations!\n")
             return
           end
@@ -52,7 +58,7 @@ function SampleController:worker()
             break
           end
         end
-      elseif not table.index_of(keys, success) then
+      elseif code ~= "success" then
         break
       end
     end
@@ -85,10 +91,11 @@ end
 
 function SampleController:killSapling()
   return self:basicAction("kill", {"sapling"}, {
-    success = "^A stout young sapling is dead!  R\\.I\\.P\\.$",
-    notHere = "^They aren't here\\.$",
-    level = "^You gain a level!$",
-    onslaught = "onslaught"
+    { code = "level", text = "^You gain a level!$" },
+    { code = "success", text = "^A stout young sapling is dead!  R\\.I\\.P\\.$|^Your first time! Was it good for you too\\?$|^Oh, much better the second time around\\.$|^Three times is the charm!$" },
+    { code = "onslaught", text = "^A sapling's trunk snaps off under the onslaught\\.$" },
+    { code = "notHere", text = "^They aren't here\\.$" },
+    { code = "lowSkill", text = "^You don't have enough skill to fight on horseback\\.$" }
   }, 200)
 end
 
@@ -96,16 +103,15 @@ function SampleController:replaceStaff()
   -- testing idea of just replacing staff with one at shop vs mending
   self:moveTo(152)
   sendAll("remove staff", "remove sword")
-  sendAll("sell staff", "sell staff", "sell sword", "sell sword")
-  send("buy staff")
-  send("wield staff")
+  sendAll("sell staff", "sell sword")
+  sendAll("buy staff", "wield staff")
   self:waitAsync(5)
 end
 
 --Your first time! Was it good for you too?
 --Oh, much better the second time around.
 --Three times is the charm!
-
+--Still better. Experience pays off.
 
 
 --lua wotdrone.SampleController:start()
