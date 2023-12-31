@@ -18,6 +18,14 @@ function SampleController:interceptPacket(packet)
   if rex.match(packet, "gold|copper", 1, "m") then
     send("get all.coin")
   end
+
+  if rex.match(packet, "^A soft leather pouch has been discarded here\\.$", 1, "m") then
+    send("get all.coin 2.pouch")
+  end
+
+  if rex.match(packet, "^A long, heavy sword lies on the ground\\.$", 1, "m") then
+    send("get sword")
+  end
   
   if rex.match(packet, "^You are hungry\\.$", 1, "m") then
     self.hungry = true
