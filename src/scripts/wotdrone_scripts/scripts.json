@@ -1,5 +1,8 @@
 [
-  { "name": "main" },
-  { "name": "baseController" },
-  { "name": "sampleController" }
+  { "name": "globals" },
+  { "name": "roomWeights" },
+  { "name": "eventDispatcher" },
+  { "name": "controller" },
+  { "name": "controller_extensions" },
+  { "name": "main" }
 ]

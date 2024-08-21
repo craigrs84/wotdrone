@@ -1,3 +1,4 @@
+wotdrone = wotdrone or {}
 wotdrone.BaseController = wotdrone.BaseController or {}
 local BaseController = wotdrone.BaseController
 local success = "success"
@@ -135,13 +136,41 @@ function BaseController:createLineTrigger()
     local prompt, trailing = self:isPrompt(line)
     if prompt ~= nil then
       --prompt
-      self._packet = self._packet .. prompt .. "\n"        
+      self._packet = self._packet .. prompt .. "\n"
       self._lastPacket = self._packet
       self:dispatch("wotmudPacket", self._packet)        
       self._packet = trailing:len() > 0 and trailing .. "\n" or ""
     else
       --not prompt
       self._packet = self._packet .. line .. "\n"
+    end
+  end)
+end
+
+function BaseController:createLineTrigger2(command)
+  local packet = ""
+  local lines = {}
+
+  sendAll("alias _action " .. command, "_action")
+  return tempRegexTrigger(f"^.*$", function()
+    local prompt, trailing = self:isPrompt(line)
+    if prompt ~= nil then
+      --prompt
+      if rex.plainfind(packet, "[" .. command .. "]") or rex.plainfind(packet, "[" .. command .. " ]") then
+        local i = 1
+        for item, _ in rex.gmatch(packet, "[^\\n]*") do
+          if i > 1 then
+            table.insert(lines, item)
+          end
+          i = i + 1
+        end
+        packet = table.concat(lines, "\n")
+        
+      end
+      packet = trailing:len() > 0 and trailing .. "\n" or ""
+    else
+      --not prompt
+      packet = packet .. line .. "\n"
     end
   end)
 end
